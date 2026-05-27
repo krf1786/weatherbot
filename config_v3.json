@@ -1,0 +1,88 @@
+{
+  "_version": "3.0.0",
+  "_comment": "WeatherBet v3 \u2014 Ensemble + CLOB Maker + Thesis Monitors",
+  "execution_mode": "paper",
+  "bankroll": {
+    "balance": 100.0,
+    "max_bet": 5.0,
+    "min_position_size": 0.5
+  },
+  "ensemble": {
+    "model": "ecmwf_ens",
+    "fallback_model": "gefs",
+    "cache_hours": 6,
+    "min_members": 10,
+    "use_kde_smoothing": true
+  },
+  "clob": {
+    "api_key": "",
+    "private_key": "11483b890b1cf70d8b793216a915164243fd20031e3eaf032c4ecabdd4ca57bf",
+    "funder_address": "0xdd4D1952fc05C1f7ec7f208BE9EcFDEA8b016e4b",
+    "host": "https://clob.polymarket.com",
+    "chain_id": 137,
+    "gamma_host": "https://gamma-api.polymarket.com",
+    "execution": {
+      "strategy": "maker",
+      "aggression": 0.25,
+      "unfilled_minutes_max": 15,
+      "max_spread": 0.08,
+      "maker_active": true
+    }
+  },
+  "thesis": {
+    "prob_drop_threshold": 0.15,
+    "prob_floor": 0.3,
+    "max_spread": 0.08,
+    "max_spread_ratio": 0.5,
+    "min_volume": 100.0,
+    "min_hold_minutes": 30,
+    "mean_shift_degrees": 2.0,
+    "enabled": true
+  },
+  "spatial": {
+    "enabled": true,
+    "synoptic_sigma_km": 800.0,
+    "min_correlation_floor": 0.3,
+    "max_total_correlation": 1.5,
+    "distance_weight": 0.4,
+    "wind_weight": 0.3,
+    "pressure_weight": 0.3
+  },
+  "sensor": {
+    "enabled": false,
+    "max_metar_age_minutes": 120,
+    "blacklist_duration_hours": 24,
+    "temp_low_bound_c": -80.0,
+    "temp_high_bound_c": 60.0
+  },
+  "mos": {
+    "enabled": false,
+    "_comment_enabled": "Set true after 90 days of training data accumulated",
+    "min_samples": 90,
+    "model_dir": "data/mos/by_station",
+    "training_dir": "data/mos/training_data"
+  },
+  "filters": {
+    "min_ev": 0.05,
+    "max_price": 0.45,
+    "min_volume": 500,
+    "min_hours": 2.0,
+    "max_hours": 72.0
+  },
+  "kelly": {
+    "base_fraction": 0.25,
+    "use_spatial_penalty": true,
+    "use_ensemble_prob": true
+  },
+  "scan": {
+    "interval_seconds": 3600,
+    "monitor_interval_seconds": 600,
+    "sensor_check_interval_hours": 3
+  },
+  "proxy": {
+    "url": "http://100.101.43.38:8888",
+    "no_proxy": "aviationweather.gov,api.open-meteo.com,ensemble-api.open-meteo.com,weather.visualcrossing.com,visualcrossing.com,localhost,127.0.0.1"
+  },
+  "vc_key": "KNE8F9MXYUXQD8J9ESKM323TQ",
+  "calibration_min": 30
+}
