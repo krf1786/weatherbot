@@ -1,10 +1,10 @@
 {
   "_version": "3.0.0",
   "_comment": "WeatherBet v3 \u2014 Ensemble + CLOB Maker + Thesis Monitors",
-  "execution_mode": "paper",
+  "execution_mode": "live",
   "bankroll": {
     "balance": 100.0,
-    "max_bet": 5.0,
+    "max_bet": 2.5,
     "min_position_size": 0.5
   },
   "ensemble": {
@@ -24,17 +24,17 @@
     "execution": {
       "strategy": "maker",
       "aggression": 0.25,
-      "unfilled_minutes_max": 15,
+      "unfilled_minutes_max": 5,
       "max_spread": 0.08,
       "maker_active": true
     }
   },
   "thesis": {
-    "prob_drop_threshold": 0.15,
+    "prob_drop_threshold": 0.25,
     "prob_floor": 0.3,
     "max_spread": 0.08,
     "max_spread_ratio": 0.5,
-    "min_volume": 100.0,
+    "min_volume": 1000.0,
     "min_hold_minutes": 30,
     "mean_shift_degrees": 2.0,
     "enabled": true
@@ -63,8 +63,9 @@
     "training_dir": "data/mos/training_data"
   },
   "filters": {
-    "min_ev": 0.05,
+    "min_ev": 0.02,
     "max_price": 0.45,
+    "min_price": 0.001,
     "min_volume": 500,
     "min_hours": 2.0,
     "max_hours": 72.0
@@ -80,8 +81,8 @@
     "sensor_check_interval_hours": 3
   },
   "proxy": {
-    "url": "http://100.101.43.38:8888",
-    "no_proxy": "aviationweather.gov,api.open-meteo.com,ensemble-api.open-meteo.com,weather.visualcrossing.com,visualcrossing.com,localhost,127.0.0.1"
+    "url": "http://g1zWlVbbjTWLWAlG:3vM4GzBycYxiJSMQ_country-us@geo.iproyal.com:12321",
+    "no_proxy": "aviationweather.gov,api.open-meteo.com,ensemble-api.open-meteo.com,weather.visualcrossing.com,visualcrossing.com,localhost,127.0.0.1,clob.polymarket.com,gamma-api.polymarket.com"
   },
   "vc_key": "KNE8F9MXYUXQD8J9ESKM323TQ",
   "calibration_min": 30

@@ -106,6 +106,12 @@ class MakerEngine:
         self.private_key = private_key
         self.funder = funder
         self.proxy_url = proxy_url
+        
+        # Patch the py_clob_client httpx client to use proxy
+        if proxy_url:
+            import httpx as _httpx
+            from py_clob_client.http_helpers import helpers as _helpers
+            _helpers._http_client = _httpx.Client(http2=True, proxy=proxy_url)
         self.host = host
         self.chain_id = chain_id
         self.unfilled_minutes_max = unfilled_minutes_max
