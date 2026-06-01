@@ -1,6 +1,6 @@
 {
-  "balance": 10000.0,
-  "max_bet": 20.0,
+  "balance": 43.71,
+  "max_bet": 5.0,
   "min_ev": 0.1,
   "max_price": 0.45,
   "min_volume": 500,
@@ -9,6 +9,10 @@
   "kelly_fraction": 0.25,
   "scan_interval": 3600,
   "calibration_min": 30,
-  "vc_key": "YOUR_KEY_HERE",
-  "max_slippage": 0.03
+  "vc_key": "",
+  "max_slippage": 0.03,
+  "execution_mode": "paper",
+  "private_key": "",
+  "funder_address": "0xdd4D1952fc05C1f7ec7f208BE9EcFDEA8b016e4b",
+  "fee_slippage": 0.0001
 }

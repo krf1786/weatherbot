@@ -1,7 +1,7 @@
 {
   "_version": "3.0.0",
   "_comment": "WeatherBet v3 \u2014 Ensemble + CLOB Maker + Thesis Monitors",
-  "execution_mode": "paper",
+  "execution_mode": "live",
   "bankroll": {
     "balance": 100.0,
     "max_bet": 2.5,
@@ -16,7 +16,7 @@
   },
   "clob": {
     "api_key": "",
-    "private_key": "11483b890b1cf70d8b793216a915164243fd20031e3eaf032c4ecabdd4ca57bf",
+    "private_key": "",
     "funder_address": "0xdd4D1952fc05C1f7ec7f208BE9EcFDEA8b016e4b",
     "host": "https://clob.polymarket.com",
     "chain_id": 137,
@@ -81,9 +81,9 @@
     "sensor_check_interval_hours": 3
   },
   "proxy": {
-    "url": "http://g1zWlVbbjTWLWAlG:3vM4GzBycYxiJSMQ_country-us@geo.iproyal.com:12321",
+    "url": "",
     "no_proxy": "aviationweather.gov,api.open-meteo.com,ensemble-api.open-meteo.com,weather.visualcrossing.com,visualcrossing.com,localhost,127.0.0.1,gamma-api.polymarket.com"
   },
-  "vc_key": "KNE8F9MXYUXQD8J9ESKM323TQ",
+  "vc_key": "",
   "calibration_min": 30
 }

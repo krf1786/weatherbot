@@ -17,9 +17,12 @@ import sys
 import json
 import math
 import time
+import os
 import requests
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+from executor import create_executor, ExecutionMode
 
 # =============================================================================
 # CONFIG
@@ -39,10 +42,20 @@ KELLY_FRACTION   = _cfg.get("kelly_fraction", 0.25)
 MAX_SLIPPAGE     = _cfg.get("max_slippage", 0.03)  # max allowed ask-bid spread
 SCAN_INTERVAL    = _cfg.get("scan_interval", 3600)   # every hour
 CALIBRATION_MIN  = _cfg.get("calibration_min", 30)
-VC_KEY           = _cfg.get("vc_key", "")
+VC_KEY           = os.environ.get("VC_API_KEY") or _cfg.get("vc_key", "")
 
 SIGMA_F = 2.0
 SIGMA_C = 1.2
+
+# ---- Execution Layer ----
+EXECUTOR = create_executor(_cfg)
+
+# Override paper balance with live wallet balance
+if EXECUTOR.mode == ExecutionMode.LIVE:
+    live_bal = EXECUTOR.get_balance()
+    if live_bal.get("usdc_balance", 0) > 0:
+        BALANCE = live_bal["usdc_balance"]
+        print(f"  LIVE mode — wallet balance: ${BALANCE:,.2f}")
 
 DATA_DIR         = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
@@ -119,6 +132,18 @@ def calc_kelly(p, price):
 def bet_size(kelly, balance):
     raw = kelly * balance
     return round(min(raw, MAX_BET), 2)
+
+def _live_exit(pos, exit_price):
+    """Submit live sell order if in live mode."""
+    if EXECUTOR.mode == ExecutionMode.LIVE:
+        tid = pos.get("token_id", "")
+        shares = pos.get("shares", 0)
+        if tid and shares > 0:
+            order_id = EXECUTOR.sell(tid, exit_price, shares)
+            if order_id:
+                pos["clob_exit_order_id"] = order_id
+            return order_id
+    return None
 
 # =============================================================================
 # CALIBRATION
@@ -502,6 +527,7 @@ def scan_and_update():
                 outcomes.append({
                     "question":  question,
                     "market_id": mid,
+                    "token_id":  json.loads(market["clobTokenIds"])[0] if market.get("clobTokenIds") else "",
                     "range":     rng,
                     "bid":       round(bid, 4),
                     "ask":       round(ask, 4),
@@ -560,6 +586,7 @@ def scan_and_update():
 
                     # Check stop
                     if current_price <= stop:
+                        _live_exit(pos, current_price)
                         pnl = round((current_price - entry) * pos["shares"], 2)
                         balance += pos["cost"] + pnl
                         pos["closed_at"]    = snap.get("ts")
@@ -588,6 +615,7 @@ def scan_and_update():
                             current_price = o["price"]
                             break
                     if current_price is not None:
+                        _live_exit(pos, current_price)
                         pnl = round((current_price - pos["entry_price"]) * pos["shares"], 2)
                         balance += pos["cost"] + pnl
                         mkt["position"]["closed_at"]    = snap.get("ts")
@@ -630,6 +658,7 @@ def scan_and_update():
                             if size >= 0.50:
                                 best_signal = {
                                     "market_id":    o["market_id"],
+                                    "token_id":     o.get("token_id", ""),
                                     "question":     o["question"],
                                     "bucket_low":   t_low,
                                     "bucket_high":  t_high,
@@ -673,6 +702,21 @@ def scan_and_update():
                             best_signal["ev"]           = round(calc_ev(best_signal["p"], real_ask), 4)
                     except Exception as e:
                         print(f"  [WARN] Could not fetch real ask for {best_signal['market_id']}: {e}")
+
+                    if not skip_position and best_signal["entry_price"] < MAX_PRICE:
+                        # ---- Live execution ----
+                        order_id = None
+                        if EXECUTOR.mode == ExecutionMode.LIVE:
+                            tid = best_signal.get("token_id", "")
+                            if tid:
+                                order_id = EXECUTOR.buy(tid, best_signal["entry_price"], best_signal["shares"])
+                                if order_id:
+                                    best_signal["clob_order_id"] = order_id
+                                else:
+                                    print(f"  [SKIP] {loc['name']} {date} — live order failed")
+                                    skip_position = True
+                            else:
+                                print(f"  [SKIP] {loc['name']} {date} — no token_id for CLOB")
 
                     if not skip_position and best_signal["entry_price"] < MAX_PRICE:
                         balance -= best_signal["cost"]
@@ -923,6 +967,7 @@ def monitor_positions():
         stop_triggered = current_price <= stop
 
         if take_triggered or stop_triggered:
+            _live_exit(pos, current_price)
             pnl = round((current_price - entry) * pos["shares"], 2)
             balance += pos["cost"] + pnl
             pos["closed_at"]    = datetime.now(timezone.utc).isoformat()

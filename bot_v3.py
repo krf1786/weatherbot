@@ -18,7 +18,7 @@ Usage:
     python bot_v3.py train_mos  # train MOS models from accumulated data
 """
 
-import re, sys, json, math, time
+import re, sys, json, math, time, os
 import requests
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -42,6 +42,14 @@ if not CONFIG_PATH.exists():
 
 with open(CONFIG_PATH) as f:
     CFG = json.load(f)
+
+# ── SECRETS: env var override (so config files stay clean in git) ──
+if os.environ.get("POLYMARKET_KEY"):
+    CFG.setdefault("clob", {})["private_key"] = os.environ["POLYMARKET_KEY"]
+if os.environ.get("IPROYAL_PROXY_URL"):
+    CFG.setdefault("proxy", {})["url"] = os.environ["IPROYAL_PROXY_URL"]
+if os.environ.get("VC_API_KEY"):
+    CFG["vc_key"] = os.environ["VC_API_KEY"]
 
 # Shorthand access
 BANKROLL     = CFG["bankroll"]
@@ -311,17 +319,22 @@ def scan_and_update():
                 
                 # Score: probability vs market price
                 ev = ensemble_ev(prob, o["ask"])
-                if ev >= FILTERS["min_ev"] and o["volume"] >= FILTERS["min_volume"]:
-                    matched = {
-                        "outcome": o,
-                        "prob": prob,
-                        "ev": ev,
-                        "kelly": ensemble_kelly(prob, o["ask"], KELLY_CFG["base_fraction"]),
-                        "ensemble_mean": ensemble_mean,
-                        "ensemble_std": result["std_temp"],
-                        "n_members": result["n_members"],
-                    }
-                    break
+                vol_ok   = o["volume"] >= FILTERS["min_volume"]
+                price_ok = o["ask"] >= FILTERS.get("min_price", 0)
+                ev_ok    = ev >= FILTERS["min_ev"]
+                if not ev_ok or not vol_ok or not price_ok:
+                    print(f"  [REJECT] {loc['name']} {date} bucket={rng} prob={prob:.3f} ask={o['ask']:.4f} vol={o['volume']:.0f} ev={ev:.4f} (ev={ev_ok} vol={vol_ok} price={price_ok})")
+                    continue
+                matched = {
+                    "outcome": o,
+                    "prob": prob,
+                    "ev": ev,
+                    "kelly": ensemble_kelly(prob, o["ask"], KELLY_CFG["base_fraction"]),
+                    "ensemble_mean": ensemble_mean,
+                    "ensemble_std": result["std_temp"],
+                    "n_members": result["n_members"],
+                }
+                break
 
             if not matched:
                 continue
@@ -387,13 +400,18 @@ def scan_and_update():
                 if order_id:
                     entry_price = o.get("bid", o["ask"])  # maker got a better price
                 else:
-                    # Fall back to taker — buy at Gamma bestAsk
+                    # Fall back to taker — query CLOB order book for real best ask
                     try:
                         from py_clob_client.clob_types import OrderArgs
+                        book = maker.get_order_book(o["token_id"])
+                        taker_price = book.best_ask if book and book.best_ask > 0 else entry_price
+                        # If CLOB best ask is stale (>$0.90) and Gamma is reasonable, use Gamma
+                        if taker_price > 0.90 and entry_price < 0.90:
+                            taker_price = entry_price
                         order_id = maker.client.create_and_post_order(
                             OrderArgs(
                                 token_id=o["token_id"],
-                                price=round(entry_price, 4),
+                                price=round(taker_price, 4),
                                 size=shares,
                                 side="BUY",
                             )
