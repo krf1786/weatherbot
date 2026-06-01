@@ -1,7 +1,7 @@
 {
   "_version": "3.0.0",
   "_comment": "WeatherBet v3 \u2014 Ensemble + CLOB Maker + Thesis Monitors",
-  "execution_mode": "live",
+  "execution_mode": "paper",
   "bankroll": {
     "balance": 100.0,
     "max_bet": 2.5,
@@ -82,7 +82,7 @@
   },
   "proxy": {
     "url": "http://g1zWlVbbjTWLWAlG:3vM4GzBycYxiJSMQ_country-us@geo.iproyal.com:12321",
-    "no_proxy": "aviationweather.gov,api.open-meteo.com,ensemble-api.open-meteo.com,weather.visualcrossing.com,visualcrossing.com,localhost,127.0.0.1,clob.polymarket.com,gamma-api.polymarket.com"
+    "no_proxy": "aviationweather.gov,api.open-meteo.com,ensemble-api.open-meteo.com,weather.visualcrossing.com,visualcrossing.com,localhost,127.0.0.1,gamma-api.polymarket.com"
   },
   "vc_key": "KNE8F9MXYUXQD8J9ESKM323TQ",
   "calibration_min": 30
