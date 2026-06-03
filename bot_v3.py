@@ -76,13 +76,44 @@ spatial_mgr  = SpatialRiskManager(max_total_correlation=SPATIAL_CFG["max_total_c
 sensor_mon   = SensorMonitor()
 mos_correct  = MOSCorrecter(base_dir=Path(MOS_CFG.get("model_dir", "data/mos/by_station")).parent.parent 
                             if MOS_CFG.get("model_dir") else Path("data/mos"))
-
 maker = None
+breaker = None
+
 if EXECUTION_MODE == "live":
+    # Init proxy circuit breaker
+    try:
+        from proxy_circuit_breaker import ProxyCircuitBreaker
+        proxy_endpoints = []
+        proxy_url = PROXY_CFG.get("url")
+        if proxy_url:
+            proxy_endpoints.append({
+                "url": proxy_url,
+                "country": "US",
+                "max_failures": 3,
+                "reset_timeout": 30,
+            })
+        # Add extra backup proxies from config if present
+        for ep in PROXY_CFG.get("backup_endpoints", []):
+            proxy_endpoints.append(ep)
+        
+        if proxy_endpoints:
+            breaker = ProxyCircuitBreaker(
+                proxies=proxy_endpoints,
+                health_check_url="https://api.ipify.org?format=json",
+                max_failures=3,
+                reset_timeout=30,
+                health_check_interval=50,
+                sticky_session=True,
+            )
+            print(f"  Proxy breaker: {len(proxy_endpoints)} endpoint(s)")
+    except Exception as e:
+        print(f"  Proxy breaker init skipped: {e}")
+    
     maker = MakerEngine(
         private_key=CLOB_CFG["private_key"],
         funder=CLOB_CFG["funder_address"],
         proxy_url=PROXY_CFG.get("url"),
+        circuit_breaker=breaker,
         host=CLOB_CFG["host"],
         chain_id=CLOB_CFG["chain_id"],
         max_spread=CLOB_CFG["execution"]["max_spread"],
@@ -307,6 +338,14 @@ def scan_and_update():
 
             outcomes.sort(key=lambda x: x["range"][0])
 
+            # ── FILTER: skip LOW ("X or below") buckets ────────
+            # These are catastrophic: 10% WR, -$21 PnL over 10 trades.
+            # Only trade single-degree or "above X" buckets.
+            outcomes = [o for o in outcomes if o["range"][0] != -999.0]
+            if not outcomes:
+                print(f"  [SKIP] no single-degree/high buckets (all are 'X or below')")
+                continue
+
             # ── FIND MATCHING BUCKET ───────────────────────────
             matched = None
             for o in outcomes:
@@ -320,10 +359,12 @@ def scan_and_update():
                 # Score: probability vs market price
                 ev = ensemble_ev(prob, o["ask"])
                 vol_ok   = o["volume"] >= FILTERS["min_volume"]
-                price_ok = o["ask"] >= FILTERS.get("min_price", 0)
+                # Region-specific min price: US cities need higher conviction
+                min_price_threshold = FILTERS.get("min_price_us", 0.30) if loc.get("region") == "us" else FILTERS.get("min_price", 0.10)
+                price_ok = o["ask"] >= min_price_threshold
                 ev_ok    = ev >= FILTERS["min_ev"]
                 if not ev_ok or not vol_ok or not price_ok:
-                    print(f"  [REJECT] {loc['name']} {date} bucket={rng} prob={prob:.3f} ask={o['ask']:.4f} vol={o['volume']:.0f} ev={ev:.4f} (ev={ev_ok} vol={vol_ok} price={price_ok})")
+                    print(f"  [REJECT] {loc['name']} {date} bucket={o['range']} prob={prob:.3f} ask={o['ask']:.4f} vol={o['volume']:.0f} ev={ev:.4f} (ev={ev_ok} vol={vol_ok} price={price_ok} min_price={min_price_threshold})")
                     continue
                 matched = {
                     "outcome": o,

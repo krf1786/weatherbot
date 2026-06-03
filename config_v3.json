@@ -1,7 +1,8 @@
 {
   "_version": "3.0.0",
   "_comment": "WeatherBet v3 \u2014 Ensemble + CLOB Maker + Thesis Monitors",
-  "execution_mode": "live",
+  "execution_mode": "paper",
+  "_mode_note": "Set to live when POLYMARKET_KEY + working US proxy both verified. Currently paper because no live orders have actually been placed in 30+ hours (state.json shows live but clob_order_id is null on all positions).",
   "bankroll": {
     "balance": 100.0,
     "max_bet": 2.5,
@@ -65,10 +66,12 @@
   "filters": {
     "min_ev": 0.02,
     "max_price": 0.45,
-    "min_price": 0.001,
+    "min_price": 0.10,
+    "min_price_us": 0.30,
     "min_volume": 500,
     "min_hours": 2.0,
-    "max_hours": 72.0
+    "max_hours": 72.0,
+    "_filter_notes": "min_price 0.10 (was 0.001) — kill cheap long-shot bucket lottery. min_price_us 0.30 — US cities need higher conviction (4x worse WR than intl). max_price 0.45 — keep below 50% to ensure positive EV."
   },
   "kelly": {
     "base_fraction": 0.25,
